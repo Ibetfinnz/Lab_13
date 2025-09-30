@@ -2,21 +2,18 @@ pipeline {
     agent any
 
     environment {
-        // Define the Docker image
         DOCKER_IMAGE = 'ibetfinnz/fastapi-webhook:latest'
     }
 
     stages {
         stage('Start Jenkins') {
             steps {
-                // Display a message to indicate the start
                 sh 'echo Start Jenkins............'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                // Build the Docker image
                 sh 'echo "Running in $(pwd)"'
                 sh 'echo start build the Docker image = $DOCKER_IMAGE'
                 sh 'docker build -t $DOCKER_IMAGE .'
@@ -26,11 +23,11 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 script {
-                    // Use the credentials stored in Jenkins to login to Docker Hub
+                    // ใช้ withCredentials เพื่อดึงข้อมูลชื่อผู้ใช้และรหัสผ่าน Docker Hub
                     withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        // Login to Docker Hub using the credentials
+                        // ใช้ docker login แบบ non-interactive
                         sh 'echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin'
-                        // Push the image to Docker Hub
+                        // push image ไปที่ Docker Hub
                         sh 'docker push $DOCKER_IMAGE'
                     }
                 }
@@ -40,7 +37,6 @@ pipeline {
         stage('Clear Docker Components') {
             steps {
                 script {
-                    // Remove Docker images and containers
                     sh 'docker stop $(docker ps -a -q) || true'  
                     sh 'docker rm $(docker ps -a -q) || true' 
                     sh 'docker rmi $(docker images -q) || true'
@@ -52,9 +48,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Pull the Docker image from Docker Hub
                     sh 'docker pull $DOCKER_IMAGE'
-                    // Run the Docker container
                     sh 'docker run -d --name fastapi-webhook -p 8085:80 $DOCKER_IMAGE'
                 }
             }
@@ -63,7 +57,7 @@ pipeline {
 
     post {
         always {
-            // Logout from Docker Hub
+            // ออกจากระบบ Docker
             sh 'docker logout'
         }
     }
